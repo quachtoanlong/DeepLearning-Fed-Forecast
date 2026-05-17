@@ -1,0 +1,73 @@
+# ============================================================================
+# CRITICAL - These must be ignored to avoid leaking licensed data or secrets
+# ============================================================================
+
+# Real / licensed data (synthetic Input/Data_LQ.csv is fine to ship)
+Input/Data_LQ_real.*
+Input/Data_LQ_haver.*
+Input/Data_FedRateDecision*
+Input/Haver_*
+Input/*_real.*
+Input/*_private.*
+Input/*.xlsx
+Input/*.xls
+
+# Local working / helper files not part of the public release
+Archive/
+functions.py
+functions_Classification.py
+Master_results.csv
+PythonResults/
+figMapping_Inflation_roos.png
+LSTM_model effective FFrate_v3.ipynb
+*_working.ipynb
+*_scratch.ipynb
+
+# Secrets / environment
+.env
+.env.*
+!.env.example
+.envrc
+*_secret*
+*_apikey*
+
+# Editor / IDE
+.idea/
+.vscode/
+
+# ============================================================================
+# Standard hygiene
+# ============================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+.virtual_documents/
+*.nbconvert.ipynb
+Untitled*.ipynb
+
+# Notebook run artefacts (timestamped outputs)
+v3LSTM_unscaled_predictions_*.csv
+v3LSTMroosFed_*.png
+v3FixedSample*_LSTM_unscaled_*.csv
+LSTMfoosFed_*.png
+*_predictions_*.csv
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*~
