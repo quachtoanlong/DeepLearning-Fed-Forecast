@@ -92,16 +92,6 @@ A CUDA GPU is used automatically if available, otherwise CPU.
 5. **Saves outputs.** Timestamped CSVs and PNGs (see `.gitignore` —
    these are excluded from version control).
 
-## Known issues
-
-- **Cell 11 metric bug.** `pred` and `actual` are swapped in the variable
-  assignment, and the MAE line computes `mean(actual − pred)` (mean error /
-  bias) rather than `mean(|actual − pred|)`. RMSE is unaffected by the swap.
-- **Saved best `hidden_size = 224` is outside the current search space**
-  `[38, 190]`. If you re-run the Bayesian search you'll need to widen the
-  upper bound (e.g. `Integer(38, 256, name='hidden_size')`) to be able to
-  recover the previous best.
-
 ## Licence
 
 Code: MIT (see `LICENSE`). The synthetic sample data in `Input/` is also
