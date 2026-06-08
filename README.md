@@ -1,99 +1,73 @@
-# Forecasting the Effective Fed Funds Rate with an LSTM
+# DeepLearning-Fed-Forecast
 
-A one-step-ahead forecaster for the U.S. effective federal funds rate, built
-with a PyTorch LSTM and benchmarked against a VAR baseline. Hyperparameters
-are tuned via Bayesian optimisation (`scikit-optimize`) over a 6-dimensional
-search space.
+Two complementary approaches to forecasting U.S. Federal Reserve interest rate decisions using deep learning and large language models. Each sub-project lives in its own folder with its own notebook and data.
 
-## What's in here
+---
+
+## Repository Structure
 
 ```
-.
-├── LSTM_model_effective_FFrate_v3.ipynb   # the model
-├── Input/
-│   └── Data_LQ.csv                        # SYNTHETIC sample (see below)
-├── requirements.txt
-├── LICENSE                                # MIT
-└── .gitignore
+DeepLearning-Fed-Forecast/
+├── RNN/    # LSTM and GRU Fed Model
+└── LLM/    # LLM Fed Model
 ```
 
-## Important: the shipped data is synthetic
+---
 
-`Input/Data_LQ.csv` in this repository is **not real macroeconomic data**.
-It is a schema-matched file: same 22 columns, same 329 monthly observations
-from Jan-1998 to May-2025, but every value is **uniform random noise** drawn
-within the original min/max range of each column. The notebook will run end
-to end against it, but the model will not learn anything meaningful — the
-output is for verifying the pipeline only.
+## Sub-projects
 
-The real input series come from Haver Analytics, which prohibits
-redistribution of subscriber data. To reproduce the actual results you need
-to supply your own `Input/Data_LQ.csv` with the same schema (see below).
+### [`RNN/`](./RNN) — LSTM and GRU Forecaster
 
-## Column schema
+A one-step-ahead forecaster for the U.S. effective federal funds rate built with a **LSTM** and **GRU**. Hyperparameters are tuned via Bayesian optimisation (`scikit-optimize`) over a 6-dimensional search space (lag window, learning rate, epochs, hidden size, layers, dropout).
 
-The CSV must have a `Date` column in `d/m/Y` format plus the following 21
-numeric columns (order isn't strict; the notebook indexes by name):
+**Highlights:**
+- Rolling-origin evaluation from 2016 onward
+- Two forecasting experiments across different training cutoffs (end-2015, end-2019)
 
-| Column | Meaning |
-|---|---|
-| `FF` | Effective federal funds rate (target) |
-| `CINF1`, `CINF5` | 1y and 5y inflation expectations |
-| `MLU6` | Civilian employment level |
-| `FM2` | M2 money stock |
-| `LH` | Not in labor force |
-| `PCU` | PCE price index |
-| `PCUSLFE` | Core PCE price index |
-| `JCBM`, `JCXFEBM` | Additional PCE-type deflators |
-| `USPHPIM` | House price index |
-| `GSACPPIC` | Commodity / PPI series |
-| `PZRAW` | Raw industrials price index |
-| `LANAGRD` | Non-farm payrolls (dropped before training) |
-| `LKPRIVA` | Private sector employment |
-| `LEPRIVA` | Average hourly earnings (dropped before training) |
-| `Yield6m`, `Yield1Y`, `Yield2Y`, `Yield10Y` | Treasury yields |
-| `MGDPN` | Nominal GDP |
+> **Note:** The shipped `Input/Data_LQ.csv` is synthetic (schema-matched random noise). Real data comes from Haver Analytics. FRED public substitutes are recommended if you don't have a Haver licence.
 
-Public substitutes from [FRED](https://fred.stlouisfed.org/) exist for almost
-all of these (`FEDFUNDS`, `M2SL`, `PCEPI`, `PCEPILFE`, `DGS6MO`/`DGS1`/
-`DGS2`/`DGS10`, `CPIAUCSL`, `PAYEMS`, `GDP`, etc.). If you don't have a Haver
-licence, swapping these in is the recommended path.
-
-## How to run
+**Requirements:** `torch`, `scikit-optimize`, `pandas`, `numpy`, `matplotlib`, `jupyter`
 
 ```bash
-python -m venv .venv && source .venv/bin/activate   # or your env of choice
-pip install -r requirements.txt
-jupyter lab LSTM_model_effective_FFrate_v3.ipynb
+python -m venv .venv && source .venv/bin/activate
+pip install -r RNN/requirements.txt
+jupyter lab RNN/LSTM_model_effective_FFrate_v3.ipynb
 ```
 
-A CUDA GPU is used automatically if available, otherwise CPU.
+---
 
-## What the notebook does
+### [`LLM/`](./LLM) — Prompt Engineering with Claude (AWS Bedrock)
 
-1. **Loads + transforms data.** Reads `Input/Data_LQ.csv`, converts most level
-   series to year-over-year percent changes, constructs two yield-curve
-   spreads (`YC_2y_10y = Yield10Y − Yield2Y`, `YC_6m_1y = Yield1Y − Yield6m`),
-   shifts `FF` by –1 so the target is next month's rate, drops the first 13
-   rows of NaNs introduced by the YoY transforms, and MinMax-scales.
-2. **Defines the model.** A configurable PyTorch `LSTM(input_size, hidden,
-   output, num_layers, dropout)` with two fully-connected heads, plus a `GRU`
-   variant for comparison.
-3. **Hyperparameter search (optional).** `bayesian_optimization(...)` wraps
-   `gp_minimize` over `lag_num ∈ {4,6,12,24}`, `learn_rate ∈ [1e-4, 0.1]`,
-   `num_epochs ∈ [300, 800]`, `hidden_size ∈ [38, 190]`, `num_layers ∈ [1,7]`,
-   `dropout ∈ [0, 0.7]`. Toggled via the `CV` flag — currently `False`, which
-   reuses the best config from a previous search.
-4. **Three forecasting experiments.**
-   - Rolling-origin one-step forecast from 2016 onward, with a VAR(lag_num)
-     baseline computed at each step.
-   - Fixed-sample LSTM trained through 2015-12, predicted forward.
-   - Same with a 2020-01 cutoff.
-5. **Saves outputs.** Timestamped CSVs and PNGs (see `.gitignore` —
-   these are excluded from version control).
+A prompt engineering research project that uses **Anthropic's Claude 3.5 Sonnet** (via AWS Bedrock) to predict FOMC rate decisions from historical macroeconomic data — no model training, pure LLM inference.
+
+Five prompt framing strategies are systematically tested and validated against **112 actual Fed decisions** (December 2015 – February 2025).
+
+**Highlights:**
+- 5 prompt variants: Financial Analyst, Central Bank Advisor, Quantitative Model, Policy Simulation, Instructional Command
+- Best MAE: **0.1492%** (Prompt 1 — Financial Analyst) — less than one 25 bps Fed move
+- Monte Carlo: 100 simulations of the best prompt; MAE stable at 0.1483 ± 0.0045
+- Sensitivity analysis: economic shock scenarios (e.g. unemployment +2%, inflation +5%)
+
+**Prompt comparison (MAE — lower is better):**
+
+| Rank | Prompt | Framing | Dates Evaluated | MAE |
+|---|---|---|---|---|
+| 1 | Prompt 1 | Financial Analyst | 112/112 | **0.1492** |
+| 2 | Prompt 2 | Central Bank Advisor | 106/112 | 0.1518 |
+| 3 | Prompt 4 | Policy Simulation | 103/112 | 0.1575 |
+| 4 | Prompt 5 | Instructional Command | 104/112 | 0.1622 |
+| 5 | Prompt 3 | Quantitative Model | 112/112 | 0.1689 |
+
+**Requirements:** `boto3`, `pandas`, `tqdm`, `matplotlib`, `seaborn`, `scikit-learn`  
+**AWS:** Bedrock access in `us-east-1` with Claude 3.5 Sonnet model access enabled
+
+```bash
+pip install boto3 pandas tqdm matplotlib seaborn scikit-learn
+# Then open LLM/Main_Analysis.ipynb in JupyterLab or SageMaker Studio
+```
+
+---
 
 ## Licence
 
-Code: MIT (see `LICENSE`). The synthetic sample data in `Input/` is also
-MIT-licensed. Any real data you supply locally is your responsibility and
-governed by your own data provider's terms.
+Code: MIT. See [`RNN/LICENSE`](./RNN/LICENSE). Synthetic sample data in `RNN/Input/` is also MIT-licensed. Any real data you supply locally is governed by your data provider's terms.
